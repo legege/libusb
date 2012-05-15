@@ -1,0 +1,1 @@
+#define LIBUSB_DESCRIBE ""
