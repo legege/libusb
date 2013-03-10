@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 # use libtoolize if available, otherwise look for glibtoolize (darwin)
 if (libtoolize --version) < /dev/null > /dev/null 2>&1; then
@@ -16,4 +17,4 @@ autoheader || exit 1
 autoconf || exit 1
 automake -a -c || exit 1
 ./configure --enable-maintainer-mode --enable-debug-log \
-	--enable-examples-build $*
+	--enable-examples-build "$@"

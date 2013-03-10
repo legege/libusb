@@ -1141,7 +1141,7 @@ static int calculate_timeout(struct usbi_transfer *transfer)
 	current_time.tv_sec += timeout / 1000;
 	current_time.tv_nsec += (timeout % 1000) * 1000000;
 
-	if (current_time.tv_nsec > 1000000000) {
+	while (current_time.tv_nsec >= 1000000000) {
 		current_time.tv_nsec -= 1000000000;
 		current_time.tv_sec++;
 	}
@@ -1292,6 +1292,7 @@ int API_EXPORTED libusb_submit_transfer(struct libusb_transfer *transfer)
 		LIBUSB_TRANSFER_TO_USBI_TRANSFER(transfer);
 	int r;
 	int first;
+	int updated_fds;
 
 	usbi_mutex_lock(&itransfer->lock);
 	itransfer->transferred = 0;
@@ -1325,7 +1326,10 @@ int API_EXPORTED libusb_submit_transfer(struct libusb_transfer *transfer)
 #endif
 
 out:
+	updated_fds = (itransfer->flags & USBI_TRANSFER_UPDATED_FDS);
 	usbi_mutex_unlock(&itransfer->lock);
+	if (updated_fds)
+		usbi_fd_notification(ctx);
 	return r;
 }
 
@@ -1453,17 +1457,14 @@ int usbi_handle_transfer_completion(struct usbi_transfer *itransfer,
 
 	usbi_mutex_lock(&ctx->flying_transfers_lock);
 	list_del(&itransfer->list);
-	if (usbi_using_timerfd(ctx))
-		r = arm_timerfd_for_next_timeout(ctx);
-	usbi_mutex_unlock(&ctx->flying_transfers_lock);
-
 	if (usbi_using_timerfd(ctx)) {
-		if (r < 0)
-			return r;
-		r = disarm_timerfd(ctx);
-		if (r < 0)
-			return r;
+		r = arm_timerfd_for_next_timeout(ctx);
+		if (0 == r)
+			r = disarm_timerfd(ctx);
 	}
+	usbi_mutex_unlock(&ctx->flying_transfers_lock);
+	if (r < 0)
+		return r;
 
 	if (status == LIBUSB_TRANSFER_COMPLETED
 			&& transfer->flags & LIBUSB_TRANSFER_SHORT_NOT_OK) {
@@ -1746,7 +1747,7 @@ int API_EXPORTED libusb_wait_for_event(libusb_context *ctx, struct timeval *tv)
 
 	timeout.tv_sec += tv->tv_sec;
 	timeout.tv_nsec += tv->tv_usec * 1000;
-	if (timeout.tv_nsec > 1000000000) {
+	while (timeout.tv_nsec >= 1000000000) {
 		timeout.tv_nsec -= 1000000000;
 		timeout.tv_sec++;
 	}

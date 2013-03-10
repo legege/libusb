@@ -68,15 +68,15 @@ struct list_head {
  *	type - the type of the first parameter
  */
 #define list_for_each_entry(pos, head, member, type)			\
-	for (pos = list_entry((head)->next, type, member);			\
-		 &pos->member != (head);								\
-		 pos = list_entry(pos->member.next, type, member))
+	for (pos = list_entry((head)->next, type, member);		\
+	     &pos->member != (head);					\
+	     pos = list_entry(pos->member.next, type, member))
 
-#define list_for_each_entry_safe(pos, n, head, member, type)	\
-	for (pos = list_entry((head)->next, type, member),			\
-		 n = list_entry(pos->member.next, type, member);		\
-		 &pos->member != (head);								\
-		 pos = n, n = list_entry(n->member.next, type, member))
+#define list_for_each_entry_safe(pos, n, head, member, type)		\
+	for (pos = list_entry((head)->next, type, member),		\
+	       n = list_entry(pos->member.next, type, member);		\
+	     &pos->member != (head);					\
+	     pos = n, n = list_entry(n->member.next, type, member))
 
 #define list_empty(entry) ((entry)->next == (entry))
 
@@ -385,6 +385,9 @@ enum usbi_transfer_flags {
 
 	/* Operation on the transfer failed because the device disappeared */
 	USBI_TRANSFER_DEVICE_DISAPPEARED = 1 << 3,
+
+	/* Set by backend submit_transfer() if the fds in use were updated */
+	USBI_TRANSFER_UPDATED_FDS = 1 << 4,
 };
 
 #define USBI_TRANSFER_TO_LIBUSB_TRANSFER(transfer) \

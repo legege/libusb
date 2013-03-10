@@ -29,7 +29,6 @@
 #include <fcntl.h>
 #include <process.h>
 #include <stdio.h>
-#include <inttypes.h>
 #include <objbase.h>
 #include <winioctl.h>
 
@@ -1768,7 +1767,7 @@ static int submit_bulk_transfer(struct usbi_transfer *itransfer)
 	usbi_add_pollfd(ctx, transfer_priv->pollable_fd.fd,
 		(short)(IS_XFERIN(transfer) ? POLLIN : POLLOUT));
 
-	usbi_fd_notification(ctx);
+	itransfer->flags |= USBI_TRANSFER_UPDATED_FDS;
 	return LIBUSB_SUCCESS;
 }
 
@@ -1788,7 +1787,7 @@ static int submit_iso_transfer(struct usbi_transfer *itransfer)
 	usbi_add_pollfd(ctx, transfer_priv->pollable_fd.fd,
 		(short)(IS_XFERIN(transfer) ? POLLIN : POLLOUT));
 
-	usbi_fd_notification(ctx);
+	itransfer->flags |= USBI_TRANSFER_UPDATED_FDS;
 	return LIBUSB_SUCCESS;
 }
 
@@ -1807,7 +1806,7 @@ static int submit_control_transfer(struct usbi_transfer *itransfer)
 
 	usbi_add_pollfd(ctx, transfer_priv->pollable_fd.fd, POLLIN);
 
-	usbi_fd_notification(ctx);
+	itransfer->flags |= USBI_TRANSFER_UPDATED_FDS;
 	return LIBUSB_SUCCESS;
 
 }
@@ -1997,7 +1996,7 @@ unsigned __stdcall windows_clock_gettime_threaded(void* param)
 		// The hires frequency can go as high as 4 GHz, so we'll use a conversion
 		// to picoseconds to compute the tv_nsecs part in clock_gettime
 		hires_ticks_to_ps = UINT64_C(1000000000000) / hires_frequency;
-		usbi_dbg("hires timer available (Frequency: %"PRIu64" Hz)", hires_frequency);
+		usbi_dbg("hires timer available (Frequency: %I64u Hz)", hires_frequency);
 	}
 
 	// Main loop - wait for requests
